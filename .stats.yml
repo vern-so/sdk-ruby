@@ -1,4 +1,4 @@
 configured_endpoints: 2
 openapi_spec_url: https://storage.googleapis.com/stainless-sdk-openapi-specs/vern%2Fvern-sdk-ad542e967553ccee05bcb6a5e2a3444c5acad7b3e38e1bd6c7761dde96300cf0.yml
 openapi_spec_hash: efc36edf8ffbd779da0353465a900ffc
-config_hash: dd84d30c2ec375a7f6cfad32b9b1c2d4
+config_hash: 989b8d06afb3cb5ffd87839347080cbf
