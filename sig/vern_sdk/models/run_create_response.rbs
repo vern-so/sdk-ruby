@@ -1,0 +1,32 @@
+module VernSDK
+  module Models
+    type run_create_response =
+      { id: String, inputs: ::Hash[Symbol, top], queued_at: Time }
+
+    class RunCreateResponse < VernSDK::Internal::Type::BaseModel
+      attr_reader id: String?
+
+      def id=: (String) -> String
+
+      attr_reader inputs: ::Hash[Symbol, top]?
+
+      def inputs=: (::Hash[Symbol, top]) -> ::Hash[Symbol, top]
+
+      attr_reader queued_at: Time?
+
+      def queued_at=: (Time) -> Time
+
+      def initialize: (
+        ?id: String,
+        ?inputs: ::Hash[Symbol, top],
+        ?queued_at: Time
+      ) -> void
+
+      def to_hash: -> {
+        id: String,
+        inputs: ::Hash[Symbol, top],
+        queued_at: Time
+      }
+    end
+  end
+end

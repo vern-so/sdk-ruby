@@ -1,0 +1,86 @@
+module VernSDK
+  module Models
+    type run_retrieve_response =
+      {
+        id: String,
+        completed_at: Time,
+        created_at: Time,
+        inputs: ::Hash[Symbol, top],
+        response: ::Hash[Symbol, top],
+        started_at: Time,
+        status: VernSDK::Models::RunRetrieveResponse::status,
+        task: String
+      }
+
+    class RunRetrieveResponse < VernSDK::Internal::Type::BaseModel
+      attr_reader id: String?
+
+      def id=: (String) -> String
+
+      attr_reader completed_at: Time?
+
+      def completed_at=: (Time) -> Time
+
+      attr_reader created_at: Time?
+
+      def created_at=: (Time) -> Time
+
+      attr_reader inputs: ::Hash[Symbol, top]?
+
+      def inputs=: (::Hash[Symbol, top]) -> ::Hash[Symbol, top]
+
+      attr_reader response: ::Hash[Symbol, top]?
+
+      def response=: (::Hash[Symbol, top]) -> ::Hash[Symbol, top]
+
+      attr_reader started_at: Time?
+
+      def started_at=: (Time) -> Time
+
+      attr_reader status: VernSDK::Models::RunRetrieveResponse::status?
+
+      def status=: (
+        VernSDK::Models::RunRetrieveResponse::status
+      ) -> VernSDK::Models::RunRetrieveResponse::status
+
+      attr_reader task: String?
+
+      def task=: (String) -> String
+
+      def initialize: (
+        ?id: String,
+        ?completed_at: Time,
+        ?created_at: Time,
+        ?inputs: ::Hash[Symbol, top],
+        ?response: ::Hash[Symbol, top],
+        ?started_at: Time,
+        ?status: VernSDK::Models::RunRetrieveResponse::status,
+        ?task: String
+      ) -> void
+
+      def to_hash: -> {
+        id: String,
+        completed_at: Time,
+        created_at: Time,
+        inputs: ::Hash[Symbol, top],
+        response: ::Hash[Symbol, top],
+        started_at: Time,
+        status: VernSDK::Models::RunRetrieveResponse::status,
+        task: String
+      }
+
+      type status = :queued | :running | :complete | :failed
+
+      module Status
+        extend VernSDK::Internal::Type::Enum
+
+        QUEUED: :queued
+        RUNNING: :running
+        COMPLETE: :complete
+        FAILED: :failed
+
+        def self?.values: -> ::Array[VernSDK::Models::RunRetrieveResponse::status]
+      end
+    end
+  end
+end
