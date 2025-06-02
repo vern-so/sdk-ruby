@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.0.1-alpha.2 (2025-06-02)
+
+Full Changelog: [v0.0.1-alpha.1...v0.0.1-alpha.2](https://github.com/vern-so/sdk-ruby/compare/v0.0.1-alpha.1...v0.0.1-alpha.2)
+
+### Chores
+
+* **internal:** version bump ([7055f60](https://github.com/vern-so/sdk-ruby/commit/7055f6044d26319d594cca274b0ae653a454977e))
+
 ## 0.0.1-alpha.1 (2025-06-02)
 
 Full Changelog: [v0.0.1-alpha.0...v0.0.1-alpha.1](https://github.com/vern-so/sdk-ruby/compare/v0.0.1-alpha.0...v0.0.1-alpha.1)
