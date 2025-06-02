@@ -1,0 +1,3 @@
+module VernSDK
+  VERSION: String
+end

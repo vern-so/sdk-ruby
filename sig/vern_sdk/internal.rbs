@@ -1,0 +1,9 @@
+module VernSDK
+  module Internal
+    extend VernSDK::Internal::Util::SorbetRuntimeSupport
+
+    type file_input = Pathname | StringIO | IO | String | VernSDK::FilePart
+
+    OMIT: Object
+  end
+end

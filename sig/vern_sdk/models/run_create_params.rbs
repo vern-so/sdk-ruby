@@ -1,0 +1,47 @@
+module VernSDK
+  module Models
+    type run_create_params =
+      {
+        task_id: String,
+        inputs: ::Hash[Symbol, top],
+        profile_id: String,
+        url: String
+      }
+      & VernSDK::Internal::Type::request_parameters
+
+    class RunCreateParams < VernSDK::Internal::Type::BaseModel
+      extend VernSDK::Internal::Type::RequestParameters::Converter
+      include VernSDK::Internal::Type::RequestParameters
+
+      attr_accessor task_id: String
+
+      attr_reader inputs: ::Hash[Symbol, top]?
+
+      def inputs=: (::Hash[Symbol, top]) -> ::Hash[Symbol, top]
+
+      attr_reader profile_id: String?
+
+      def profile_id=: (String) -> String
+
+      attr_reader url: String?
+
+      def url=: (String) -> String
+
+      def initialize: (
+        task_id: String,
+        ?inputs: ::Hash[Symbol, top],
+        ?profile_id: String,
+        ?url: String,
+        ?request_options: VernSDK::request_opts
+      ) -> void
+
+      def to_hash: -> {
+        task_id: String,
+        inputs: ::Hash[Symbol, top],
+        profile_id: String,
+        url: String,
+        request_options: VernSDK::RequestOptions
+      }
+    end
+  end
+end

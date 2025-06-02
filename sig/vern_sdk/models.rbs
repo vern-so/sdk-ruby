@@ -1,0 +1,5 @@
+module VernSDK
+  class RunCreateParams = VernSDK::Models::RunCreateParams
+
+  class RunRetrieveParams = VernSDK::Models::RunRetrieveParams
+end
