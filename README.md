@@ -15,7 +15,7 @@ To use this gem, install via Bundler by adding the following to your application
 <!-- x-release-please-start-version -->
 
 ```ruby
-gem "vern-sdk", "~> 0.0.1.pre.alpha.2"
+gem "vern-sdk", "~> 0.0.1.pre.alpha.3"
 ```
 
 <!-- x-release-please-end -->
