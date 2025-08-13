@@ -16,7 +16,8 @@ module VernSDK
             T::Array[
               [
                 T.nilable(Symbol),
-                T.proc.returns(VernSDK::Internal::Type::Converter::Input)
+                T.proc.returns(VernSDK::Internal::Type::Converter::Input),
+                VernSDK::Internal::AnyHash
               ]
             ]
           )
@@ -25,7 +26,13 @@ module VernSDK
         end
 
         # @api private
-        sig { returns(T::Array[[T.nilable(Symbol), T.anything]]) }
+        sig do
+          returns(
+            T::Array[
+              [T.nilable(Symbol), T.anything, VernSDK::Internal::AnyHash]
+            ]
+          )
+        end
         protected def derefed_variants
         end
 
