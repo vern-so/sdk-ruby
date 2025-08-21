@@ -64,14 +64,7 @@ module VernSDK
             setter = :"#{name_sym}="
             api_name = info.fetch(:api_name, name_sym)
             nilable = info.fetch(:nil?, false)
-            const = if required && !nilable
-              info.fetch(
-                :const,
-                VernSDK::Internal::OMIT
-              )
-            else
-              VernSDK::Internal::OMIT
-            end
+            const = required && !nilable ? info.fetch(:const, VernSDK::Internal::OMIT) : VernSDK::Internal::OMIT
 
             [name_sym, setter].each { undef_method(_1) } if known_fields.key?(name_sym)
 
