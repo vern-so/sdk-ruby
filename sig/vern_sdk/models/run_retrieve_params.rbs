@@ -1,15 +1,20 @@
 module VernSDK
   module Models
     type run_retrieve_params =
-      {  } & VernSDK::Internal::Type::request_parameters
+      { id: String } & VernSDK::Internal::Type::request_parameters
 
     class RunRetrieveParams < VernSDK::Internal::Type::BaseModel
       extend VernSDK::Internal::Type::RequestParameters::Converter
       include VernSDK::Internal::Type::RequestParameters
 
-      def initialize: (?request_options: VernSDK::request_opts) -> void
+      attr_accessor id: String
 
-      def to_hash: -> { request_options: VernSDK::RequestOptions }
+      def initialize: (
+        id: String,
+        ?request_options: VernSDK::request_opts
+      ) -> void
+
+      def to_hash: -> { id: String, request_options: VernSDK::RequestOptions }
     end
   end
 end
