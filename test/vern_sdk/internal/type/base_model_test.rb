@@ -66,7 +66,7 @@ class VernSDK::Test::PrimitiveModelTest < Minitest::Test
     cases.each do |lhs, rhs|
       target, input = lhs
       exactness, expect = rhs
-      state = {strictness: true, exactness: {yes: 0, no: 0, maybe: 0}, branched: 0}
+      state = VernSDK::Internal::Type::Converter.new_coerce_state
       assert_pattern do
         VernSDK::Internal::Type::Converter.coerce(target, input, state: state) => ^expect
         state.fetch(:exactness).filter { _2.nonzero? }.to_h => ^exactness
@@ -108,18 +108,19 @@ class VernSDK::Test::PrimitiveModelTest < Minitest::Test
 
   def test_coerce_errors
     cases = {
-      [Integer, "one"] => TypeError,
-      [Float, "one"] => TypeError,
+      [Integer, "one"] => ArgumentError,
+      [Float, "one"] => ArgumentError,
       [String, Time] => TypeError,
       [Date, "one"] => ArgumentError,
       [Time, "one"] => ArgumentError
     }
 
-    cases.each do
-      target, input = _1
-      state = {strictness: :strong, exactness: {yes: 0, no: 0, maybe: 0}, branched: 0}
-      assert_raises(_2) do
-        VernSDK::Internal::Type::Converter.coerce(target, input, state: state)
+    cases.each do |testcase, expect|
+      target, input = testcase
+      state = VernSDK::Internal::Type::Converter.new_coerce_state
+      VernSDK::Internal::Type::Converter.coerce(target, input, state: state)
+      assert_pattern do
+        state => {error: ^expect}
       end
     end
   end
@@ -156,6 +157,7 @@ end
 class VernSDK::Test::EnumModelTest < Minitest::Test
   class E0
     include VernSDK::Internal::Type::Enum
+
     attr_reader :values
 
     def initialize(*values) = (@values = values)
@@ -217,7 +219,7 @@ class VernSDK::Test::EnumModelTest < Minitest::Test
     cases.each do |lhs, rhs|
       target, input = lhs
       exactness, expect = rhs
-      state = {strictness: true, exactness: {yes: 0, no: 0, maybe: 0}, branched: 0}
+      state = VernSDK::Internal::Type::Converter.new_coerce_state
       assert_pattern do
         VernSDK::Internal::Type::Converter.coerce(target, input, state: state) => ^expect
         state.fetch(:exactness).filter { _2.nonzero? }.to_h => ^exactness
@@ -291,7 +293,7 @@ class VernSDK::Test::CollectionModelTest < Minitest::Test
     cases.each do |lhs, rhs|
       target, input = lhs
       exactness, expect = rhs
-      state = {strictness: true, exactness: {yes: 0, no: 0, maybe: 0}, branched: 0}
+      state = VernSDK::Internal::Type::Converter.new_coerce_state
       assert_pattern do
         VernSDK::Internal::Type::Converter.coerce(target, input, state: state) => ^expect
         state.fetch(:exactness).filter { _2.nonzero? }.to_h => ^exactness
@@ -340,6 +342,7 @@ class VernSDK::Test::BaseModelTest < Minitest::Test
 
   class M6 < M1
     required :a, VernSDK::Internal::Type::ArrayOf[M6]
+    optional :b, M6
   end
 
   def test_coerce
@@ -365,13 +368,14 @@ class VernSDK::Test::BaseModelTest < Minitest::Test
       [M5, {d: "d"}] => [{yes: 3}, {d: :d}],
       [M5, {d: nil}] => [{yes: 2, no: 1}, {d: nil}],
 
-      [M6, {a: [{a: []}]}] => [{yes: 4}, -> { _1 in {a: [M6]} }]
+      [M6, {a: [{a: []}]}] => [{yes: 6}, -> { _1 in {a: [M6]} }],
+      [M6, {b: {a: []}}] => [{yes: 4, no: 1}, -> { _1 in {b: M6} }]
     }
 
     cases.each do |lhs, rhs|
       target, input = lhs
       exactness, expect = rhs
-      state = {strictness: true, exactness: {yes: 0, no: 0, maybe: 0}, branched: 0}
+      state = VernSDK::Internal::Type::Converter.new_coerce_state
       assert_pattern do
         coerced = VernSDK::Internal::Type::Converter.coerce(target, input, state: state)
         assert_equal(coerced, coerced)
@@ -410,20 +414,26 @@ class VernSDK::Test::BaseModelTest < Minitest::Test
 
   def test_accessors
     cases = {
-      M2.new({a: "1990-09-19", b: "1"}) => {a: Time.new(1990, 9, 19), b: TypeError},
-      M2.new(a: "one", b: "one") => {a: ArgumentError, b: TypeError},
-      M2.new(a: nil, b: 2.0) => {a: TypeError},
-      M2.new(a: nil, b: 2.2) => {a: TypeError, b: ArgumentError},
+      M2.new({a: "1990-09-19", b: "1"}) => [{a: "1990-09-19", b: "1"}, {a: Time.new(1990, 9, 19), b: 1}],
+      M2.new(a: "one", b: "one") => [{a: "one", b: "one"}, {a: ArgumentError, b: ArgumentError}],
+      M2.new(a: nil, b: 2.0) => [{a: nil, b: 2.0}, {a: TypeError}],
+      M2.new(a: nil, b: 2.2) => [{a: nil, b: 2.2}, {a: TypeError, b: 2}],
 
-      M3.new => {d: :d},
-      M3.new(d: 1) => {d: ArgumentError},
+      M3.new => [{}, {d: :d}],
+      M3.new(d: 1) => [{d: 1}, {d: ArgumentError}],
 
-      M5.new => {c: :c, d: :d}
+      M5.new => [{}, {c: :c, d: :d}]
     }
 
     cases.each do
       target = _1
-      _2.each do |accessor, expect|
+      data, attributes = _2
+
+      assert_pattern do
+        target.to_h => ^data
+      end
+
+      attributes.each do |accessor, expect|
         case expect
         in Class if expect <= StandardError
           tap do
@@ -438,6 +448,24 @@ class VernSDK::Test::BaseModelTest < Minitest::Test
       end
     end
   end
+
+  def test_inplace_modification
+    m1 = M6.new(a: [])
+    m1.a << M6.new(a: [])
+
+    m2 = M6.new(b: M6.new(a: []))
+    m2.b.a << M6.new(a: [])
+
+    m3 = M6.new(a: [])
+    m4 = M6.new(b: m3)
+    m3.a << M6.new(a: [])
+
+    assert_pattern do
+      m1 => {a: [{a: []}]}
+      m2 => {b: {a: [{a: []}]}}
+      m4 => {b: {a: [{a: []}]}}
+    end
+  end
 end
 
 class VernSDK::Test::UnionTest < Minitest::Test
@@ -449,6 +477,7 @@ class VernSDK::Test::UnionTest < Minitest::Test
 
   module U1
     extend VernSDK::Internal::Type::Union
+
     variant const: :a
     variant const: 2
   end
@@ -465,6 +494,7 @@ class VernSDK::Test::UnionTest < Minitest::Test
 
   module U2
     extend VernSDK::Internal::Type::Union
+
     discriminator :type
 
     variant :a, M1
@@ -473,6 +503,7 @@ class VernSDK::Test::UnionTest < Minitest::Test
 
   module U3
     extend VernSDK::Internal::Type::Union
+
     discriminator :type
 
     variant :a, M1
@@ -481,6 +512,7 @@ class VernSDK::Test::UnionTest < Minitest::Test
 
   module U4
     extend VernSDK::Internal::Type::Union
+
     discriminator :type
 
     variant String
@@ -555,7 +587,7 @@ class VernSDK::Test::UnionTest < Minitest::Test
     cases.each do |lhs, rhs|
       target, input = lhs
       exactness, branched, expect = rhs
-      state = {strictness: true, exactness: {yes: 0, no: 0, maybe: 0}, branched: 0}
+      state = VernSDK::Internal::Type::Converter.new_coerce_state
       assert_pattern do
         coerced = VernSDK::Internal::Type::Converter.coerce(target, input, state: state)
         assert_equal(coerced, coerced)
@@ -574,6 +606,7 @@ end
 class VernSDK::Test::BaseModelQoLTest < Minitest::Test
   class E0
     include VernSDK::Internal::Type::Enum
+
     attr_reader :values
 
     def initialize(*values) = (@values = values)
@@ -658,5 +691,37 @@ class VernSDK::Test::BaseModelQoLTest < Minitest::Test
         refute_equal(*_1.map(&:hash))
       end
     end
+  end
+end
+
+class VernSDK::Test::MetaInfoTest < Minitest::Test
+  A1 = VernSDK::Internal::Type::ArrayOf[Integer, nil?: true, doc: "dog"]
+  H1 = VernSDK::Internal::Type::HashOf[-> { String }, nil?: true, doc: "dawg"]
+
+  class M1 < VernSDK::Internal::Type::BaseModel
+    required :a, Integer, doc: "dog"
+    optional :b, -> { String }, nil?: true, doc: "dawg"
+  end
+
+  module U1
+    extend VernSDK::Internal::Type::Union
+
+    variant -> { Integer }, const: 2, doc: "dog"
+    variant -> { String }, doc: "dawg"
+  end
+
+  def test_meta_retrieval
+    m1 = A1.instance_variable_get(:@meta)
+    m2 = H1.instance_variable_get(:@meta)
+    assert_equal({doc: "dog"}, m1)
+    assert_equal({doc: "dawg"}, m2)
+
+    ma, mb = M1.fields.fetch_values(:a, :b)
+    assert_equal({doc: "dog"}, ma.fetch(:meta))
+    assert_equal({doc: "dawg"}, mb.fetch(:meta))
+
+    ua, ub = U1.send(:known_variants).map(&:last)
+    assert_equal({doc: "dog"}, ua)
+    assert_equal({doc: "dawg"}, ub)
   end
 end

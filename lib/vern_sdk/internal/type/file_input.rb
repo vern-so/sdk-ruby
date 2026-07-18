@@ -45,9 +45,13 @@ module VernSDK
           #
           # @param state [Hash{Symbol=>Object}] .
           #
-          #   @option state [Boolean, :strong] :strictness
+          #   @option state [Boolean] :translate_names
+          #
+          #   @option state [Boolean] :strictness
           #
           #   @option state [Hash{Symbol=>Object}] :exactness
+          #
+          #   @option state [Class<StandardError>] :error
           #
           #   @option state [Integer] :branched
           #
@@ -62,6 +66,7 @@ module VernSDK
               exactness[:yes] += 1
               value
             else
+              state[:error] = TypeError.new("#{value.class} can't be coerced into #{StringIO}")
               exactness[:no] += 1
               value
             end
@@ -77,17 +82,20 @@ module VernSDK
           #
           # @return [Pathname, StringIO, IO, String, Object]
           def dump(value, state:)
-            # rubocop:disable Lint/DuplicateBranch
             case value
+            in StringIO | String
+              # https://datatracker.ietf.org/doc/html/rfc7578#section-4.2
+              # while not required, a filename is recommended, and in practice many servers do expect this
+              VernSDK::FilePart.new(value, filename: "upload")
             in IO
               state[:can_retry] = false
+              value.to_path.nil? ? VernSDK::FilePart.new(value, filename: "upload") : value
             in VernSDK::FilePart if value.content.is_a?(IO)
               state[:can_retry] = false
+              value
             else
+              value
             end
-            # rubocop:enable Lint/DuplicateBranch
-
-            value
           end
 
           # @api private

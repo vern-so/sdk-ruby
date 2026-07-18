@@ -12,20 +12,20 @@ module VernSDK
         #
         # All of the specified variant info for this union.
         #
-        # @return [Array<Array(Symbol, Proc)>]
+        # @return [Array<Array(Symbol, Proc, Hash{Symbol=>Object})>]
         private def known_variants = (@known_variants ||= [])
 
         # @api private
         #
-        # @return [Array<Array(Symbol, Object)>]
+        # @return [Array<Array(Symbol, Object, Hash{Symbol=>Object})>]
         protected def derefed_variants
-          known_variants.map { |key, variant_fn| [key, variant_fn.call] }
+          known_variants.map { |key, variant_fn, meta| [key, variant_fn.call, meta] }
         end
 
         # All of the specified variants for this union.
         #
         # @return [Array<Object>]
-        def variants = derefed_variants.map(&:last)
+        def variants = derefed_variants.map { _2 }
 
         # @api private
         #
@@ -51,12 +51,13 @@ module VernSDK
         #
         #   @option spec [Boolean] :"nil?"
         private def variant(key, spec = nil)
+          meta = VernSDK::Internal::Type::Converter.meta_info(nil, spec)
           variant_info =
             case key
             in Symbol
-              [key, VernSDK::Internal::Type::Converter.type_info(spec)]
+              [key, VernSDK::Internal::Type::Converter.type_info(spec), meta]
             in Proc | VernSDK::Internal::Type::Converter | Class | Hash
-              [nil, VernSDK::Internal::Type::Converter.type_info(key)]
+              [nil, VernSDK::Internal::Type::Converter.type_info(key), meta]
             end
 
           known_variants << variant_info
@@ -79,7 +80,8 @@ module VernSDK
             return nil if key == VernSDK::Internal::OMIT
 
             key = key.to_sym if key.is_a?(String)
-            known_variants.find { |k,| k == key }&.last&.call
+            _, found = known_variants.find { |k,| k == key }
+            found&.call
           else
             nil
           end
@@ -115,13 +117,22 @@ module VernSDK
 
         # @api private
         #
+        # Tries to efficiently coerce the given value to one of the known variants.
+        #
+        # If the value cannot match any of the known variants, the coercion is considered
+        # non-viable and returns the original value.
+        #
         # @param value [Object]
         #
         # @param state [Hash{Symbol=>Object}] .
         #
-        #   @option state [Boolean, :strong] :strictness
+        #   @option state [Boolean] :translate_names
+        #
+        #   @option state [Boolean] :strictness
         #
         #   @option state [Hash{Symbol=>Object}] :exactness
+        #
+        #   @option state [Class<StandardError>] :error
         #
         #   @option state [Integer] :branched
         #
@@ -133,7 +144,6 @@ module VernSDK
 
           strictness = state.fetch(:strictness)
           exactness = state.fetch(:exactness)
-          state[:strictness] = strictness == :strong ? true : strictness
 
           alternatives = []
           known_variants.each do |_, variant_fn|
@@ -152,13 +162,10 @@ module VernSDK
             end
           end
 
-          case alternatives.sort_by(&:first)
+          case alternatives.sort_by!(&:first)
           in []
             exactness[:no] += 1
-            if strictness == :strong
-              message = "no possible conversion of #{value.class} into a variant of #{target.inspect}"
-              raise ArgumentError.new(message)
-            end
+            state[:error] = ArgumentError.new("no matching variant for #{value.inspect}")
             value
           in [[_, exact, coerced], *]
             exact.each { exactness[_1] += _2 }
@@ -195,11 +202,14 @@ module VernSDK
         #
         # @return [Object]
         def to_sorbet_type
-          case (v = variants)
+          types = variants.map { VernSDK::Internal::Util::SorbetRuntimeSupport.to_sorbet_type(_1) }.uniq
+          case types
           in []
             T.noreturn
+          in [type]
+            type
           else
-            T.any(*v.map { VernSDK::Internal::Util::SorbetRuntimeSupport.to_sorbet_type(_1) })
+            T.any(*types)
           end
         end
 

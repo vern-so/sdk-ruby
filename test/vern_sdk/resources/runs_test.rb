@@ -4,7 +4,7 @@ require_relative "../test_helper"
 
 class VernSDK::Test::Resources::RunsTest < VernSDK::Test::ResourceTest
   def test_create_required_params
-    skip("skipped: tests are disabled for the time being")
+    skip("Mock server tests are disabled")
 
     response = @vern.runs.create(task_id: "task_123456")
 
@@ -22,7 +22,7 @@ class VernSDK::Test::Resources::RunsTest < VernSDK::Test::ResourceTest
   end
 
   def test_retrieve
-    skip("skipped: tests are disabled for the time being")
+    skip("Mock server tests are disabled")
 
     response = @vern.runs.retrieve("id")
 

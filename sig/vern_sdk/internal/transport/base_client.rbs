@@ -87,6 +87,8 @@ module VernSDK
 
         private def auth_headers: -> ::Hash[String, String]
 
+        private def user_agent: -> String
+
         private def generate_idempotency_key: -> String
 
         private def build_request: (
@@ -99,7 +101,7 @@ module VernSDK
           retry_count: Integer
         ) -> Float
 
-        private def send_request: (
+        def send_request: (
           VernSDK::Internal::Transport::BaseClient::request_input request,
           redirect_count: Integer,
           retry_count: Integer,

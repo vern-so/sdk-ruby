@@ -47,7 +47,7 @@ module VernSDK
           # @api private
           #
           # @param status [Integer]
-          # @param headers [Hash{String=>String}, Net::HTTPHeader]
+          # @param headers [Hash{String=>String}]
           #
           # @return [Boolean]
           def should_retry?(status, headers:)
@@ -85,7 +85,7 @@ module VernSDK
           #
           # @param status [Integer]
           #
-          # @param response_headers [Hash{String=>String}, Net::HTTPHeader]
+          # @param response_headers [Hash{String=>String}]
           #
           # @return [Hash{Symbol=>Object}]
           def follow_redirect(request, status:, response_headers:)
@@ -201,7 +201,8 @@ module VernSDK
             self.class::PLATFORM_HEADERS,
             {
               "accept" => "application/json",
-              "content-type" => "application/json"
+              "content-type" => "application/json",
+              "user-agent" => user_agent
             },
             headers
           )
@@ -218,6 +219,11 @@ module VernSDK
         #
         # @return [Hash{String=>String}]
         private def auth_headers = {}
+
+        # @api private
+        #
+        # @return [String]
+        private def user_agent = "#{self.class.name}/Ruby #{VernSDK::VERSION}"
 
         # @api private
         #
@@ -300,6 +306,11 @@ module VernSDK
               VernSDK::Internal::Util.deep_merge(*[req[:body], opts[:extra_body]].compact)
             end
 
+          # Generated methods always pass `req[:body]` for operations that define a
+          # request body, so only elide the content-type header when the operation
+          # has no body at all, not when an optional body param was omitted.
+          headers.delete("content-type") if body.nil? && !req.key?(:body)
+
           url = VernSDK::Internal::Util.join_parsed_uri(
             @base_url_components,
             {**req, path: path, query: query}
@@ -365,7 +376,7 @@ module VernSDK
         #
         # @raise [VernSDK::Errors::APIError]
         # @return [Array(Integer, Net::HTTPResponse, Enumerable<String>)]
-        private def send_request(request, redirect_count:, retry_count:, send_retry_header:)
+        def send_request(request, redirect_count:, retry_count:, send_retry_header:)
           url, headers, max_retries, timeout = request.fetch_values(:url, :headers, :max_retries, :timeout)
           input = {**request.except(:timeout), deadline: VernSDK::Internal::Util.monotonic_secs + timeout}
 
@@ -378,6 +389,7 @@ module VernSDK
           rescue VernSDK::Errors::APIConnectionError => e
             status = e
           end
+          headers = VernSDK::Internal::Util.normalized_headers(response&.each_header&.to_h)
 
           case status
           in ..299
@@ -390,7 +402,7 @@ module VernSDK
           in 300..399
             self.class.reap_connection!(status, stream: stream)
 
-            request = self.class.follow_redirect(request, status: status, response_headers: response)
+            request = self.class.follow_redirect(request, status: status, response_headers: headers)
             send_request(
               request,
               redirect_count: redirect_count + 1,
@@ -399,9 +411,9 @@ module VernSDK
             )
           in VernSDK::Errors::APIConnectionError if retry_count >= max_retries
             raise status
-          in (400..) if retry_count >= max_retries || !self.class.should_retry?(status, headers: response)
+          in (400..) if retry_count >= max_retries || !self.class.should_retry?(status, headers: headers)
             decoded = Kernel.then do
-              VernSDK::Internal::Util.decode_content(response, stream: stream, suppress_error: true)
+              VernSDK::Internal::Util.decode_content(headers, stream: stream, suppress_error: true)
             ensure
               self.class.reap_connection!(status, stream: stream)
             end
@@ -409,6 +421,7 @@ module VernSDK
             raise VernSDK::Errors::APIStatusError.for(
               url: url,
               status: status,
+              headers: headers,
               body: decoded,
               request: nil,
               response: response
@@ -471,6 +484,7 @@ module VernSDK
           self.class.validate!(req)
           model = req.fetch(:model) { VernSDK::Internal::Type::Unknown }
           opts = req[:options].to_h
+          unwrap = req[:unwrap]
           VernSDK::RequestOptions.validate!(opts)
           request = build_request(req.except(:options), opts)
           url = request.fetch(:url)
@@ -484,14 +498,23 @@ module VernSDK
             send_retry_header: send_retry_header
           )
 
-          decoded = VernSDK::Internal::Util.decode_content(response, stream: stream)
+          headers = VernSDK::Internal::Util.normalized_headers(response.each_header.to_h)
+          decoded = VernSDK::Internal::Util.decode_content(headers, stream: stream)
           case req
           in {stream: Class => st}
-            st.new(model: model, url: url, status: status, response: response, stream: decoded)
+            st.new(
+              model: model,
+              url: url,
+              status: status,
+              headers: headers,
+              response: response,
+              unwrap: unwrap,
+              stream: decoded
+            )
           in {page: Class => page}
-            page.new(client: self, req: req, headers: response, page_data: decoded)
+            page.new(client: self, req: req, headers: headers, page_data: decoded)
           else
-            unwrapped = VernSDK::Internal::Util.dig(decoded, req[:unwrap])
+            unwrapped = VernSDK::Internal::Util.dig(decoded, unwrap)
             VernSDK::Internal::Type::Converter.coerce(model, unwrapped)
           end
         end

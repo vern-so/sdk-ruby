@@ -8,6 +8,22 @@ module VernSDK
     end
 
     class ConversionError < VernSDK::Errors::Error
+      sig { returns(T.nilable(StandardError)) }
+      def cause
+      end
+
+      # @api private
+      sig do
+        params(
+          on: T::Class[StandardError],
+          method: Symbol,
+          target: T.anything,
+          value: T.anything,
+          cause: T.nilable(StandardError)
+        ).returns(T.attached_class)
+      end
+      def self.new(on:, method:, target:, value:, cause: nil)
+      end
     end
 
     class APIError < VernSDK::Errors::Error
@@ -17,6 +33,9 @@ module VernSDK
       sig { returns(T.nilable(Integer)) }
       attr_accessor :status
 
+      sig { returns(T.nilable(T::Hash[String, String])) }
+      attr_accessor :headers
+
       sig { returns(T.nilable(T.anything)) }
       attr_accessor :body
 
@@ -25,6 +44,7 @@ module VernSDK
         params(
           url: URI::Generic,
           status: T.nilable(Integer),
+          headers: T.nilable(T::Hash[String, String]),
           body: T.nilable(Object),
           request: NilClass,
           response: NilClass,
@@ -34,6 +54,7 @@ module VernSDK
       def self.new(
         url:,
         status: nil,
+        headers: nil,
         body: nil,
         request: nil,
         response: nil,
@@ -43,10 +64,10 @@ module VernSDK
     end
 
     class APIConnectionError < VernSDK::Errors::APIError
-      sig { void }
+      sig { returns(NilClass) }
       attr_accessor :status
 
-      sig { void }
+      sig { returns(NilClass) }
       attr_accessor :body
 
       # @api private
@@ -54,6 +75,7 @@ module VernSDK
         params(
           url: URI::Generic,
           status: NilClass,
+          headers: T.nilable(T::Hash[String, String]),
           body: NilClass,
           request: NilClass,
           response: NilClass,
@@ -63,6 +85,7 @@ module VernSDK
       def self.new(
         url:,
         status: nil,
+        headers: nil,
         body: nil,
         request: nil,
         response: nil,
@@ -77,6 +100,7 @@ module VernSDK
         params(
           url: URI::Generic,
           status: NilClass,
+          headers: T.nilable(T::Hash[String, String]),
           body: NilClass,
           request: NilClass,
           response: NilClass,
@@ -86,6 +110,7 @@ module VernSDK
       def self.new(
         url:,
         status: nil,
+        headers: nil,
         body: nil,
         request: nil,
         response: nil,
@@ -100,13 +125,22 @@ module VernSDK
         params(
           url: URI::Generic,
           status: Integer,
+          headers: T.nilable(T::Hash[String, String]),
           body: T.nilable(Object),
           request: NilClass,
           response: NilClass,
           message: T.nilable(String)
         ).returns(T.attached_class)
       end
-      def self.for(url:, status:, body:, request:, response:, message: nil)
+      def self.for(
+        url:,
+        status:,
+        headers:,
+        body:,
+        request:,
+        response:,
+        message: nil
+      )
       end
 
       sig { returns(Integer) }
@@ -117,13 +151,22 @@ module VernSDK
         params(
           url: URI::Generic,
           status: Integer,
+          headers: T.nilable(T::Hash[String, String]),
           body: T.nilable(Object),
           request: NilClass,
           response: NilClass,
           message: T.nilable(String)
         ).returns(T.attached_class)
       end
-      def self.new(url:, status:, body:, request:, response:, message: nil)
+      def self.new(
+        url:,
+        status:,
+        headers:,
+        body:,
+        request:,
+        response:,
+        message: nil
+      )
       end
     end
 

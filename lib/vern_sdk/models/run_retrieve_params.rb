@@ -7,7 +7,13 @@ module VernSDK
       extend VernSDK::Internal::Type::RequestParameters::Converter
       include VernSDK::Internal::Type::RequestParameters
 
-      # @!method initialize(request_options: {})
+      # @!attribute id
+      #
+      #   @return [String]
+      required :id, String
+
+      # @!method initialize(id:, request_options: {})
+      #   @param id [String]
       #   @param request_options [VernSDK::RequestOptions, Hash{Symbol=>Object}]
     end
   end

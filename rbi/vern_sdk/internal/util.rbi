@@ -148,10 +148,18 @@ module VernSDK
         end
       end
 
+      # https://www.rfc-editor.org/rfc/rfc3986.html#section-3.3
+      RFC_3986_NOT_PCHARS = T.let(/[^A-Za-z0-9\-._~!$&'()*+,;=:@]+/, Regexp)
+
       class << self
         # @api private
         sig { params(uri: URI::Generic).returns(String) }
         def uri_origin(uri)
+        end
+
+        # @api private
+        sig { params(path: T.any(String, Integer)).returns(String) }
+        def encode_path(path)
         end
 
         # @api private
@@ -296,11 +304,31 @@ module VernSDK
       end
 
       JSON_CONTENT =
-        T.let(%r{^application/(?:vnd(?:\.[^.]+)*\+)?json(?!l)}, Regexp)
+        T.let(%r{^application/(?:[a-zA-Z0-9.-]+\+)?json(?!l)}, Regexp)
       JSONL_CONTENT =
         T.let(%r{^application/(:?x-(?:n|l)djson)|(:?(?:x-)?jsonl)}, Regexp)
 
       class << self
+        # @api private
+        sig do
+          params(query: VernSDK::Internal::AnyHash).returns(
+            VernSDK::Internal::AnyHash
+          )
+        end
+        def encode_query_params(query)
+        end
+
+        # @api private
+        sig do
+          params(
+            collection: VernSDK::Internal::AnyHash,
+            key: String,
+            element: T.anything
+          ).void
+        end
+        private def write_query_param_element!(collection, key, element)
+        end
+
         # @api private
         sig do
           params(
@@ -332,6 +360,8 @@ module VernSDK
         end
 
         # @api private
+        #
+        # https://github.com/OAI/OpenAPI-Specification/blob/main/versions/3.1.1.md#special-considerations-for-multipart-content
         sig do
           params(body: T.anything).returns([String, T::Enumerable[String]])
         end
@@ -359,7 +389,7 @@ module VernSDK
         # Assumes each chunk in stream has `Encoding::BINARY`.
         sig do
           params(
-            headers: T.any(T::Hash[String, String], Net::HTTPHeader),
+            headers: T::Hash[String, String],
             stream: T::Enumerable[String],
             suppress_error: T::Boolean
           ).returns(T.anything)

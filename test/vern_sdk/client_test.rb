@@ -100,19 +100,21 @@ class VernSDKTest < Minitest::Test
   end
 
   def test_client_retry_after_date
+    time_now = Time.now
+
     stub_request(:post, "http://localhost/runs").to_return_json(
       status: 500,
-      headers: {"retry-after" => (Time.now + 10).httpdate},
+      headers: {"retry-after" => (time_now + 10).httpdate},
       body: {}
     )
 
     vern = VernSDK::Client.new(base_url: "http://localhost", api_key: "My API Key", max_retries: 1)
 
+    Thread.current.thread_variable_set(:time_now, time_now)
     assert_raises(VernSDK::Errors::InternalServerError) do
-      Thread.current.thread_variable_set(:time_now, Time.now)
       vern.runs.create(task_id: "task_123456")
-      Thread.current.thread_variable_set(:time_now, nil)
     end
+    Thread.current.thread_variable_set(:time_now, nil)
 
     assert_requested(:any, /./, times: 2)
     assert_in_delta(10, Thread.current.thread_variable_get(:mock_sleep).last, 1.0)
@@ -204,8 +206,8 @@ class VernSDKTest < Minitest::Test
       assert_equal(recorded.method, _1.method)
       assert_equal(recorded.body, _1.body)
       assert_equal(
-        recorded.headers.transform_keys(&:downcase).fetch("content-type"),
-        _1.headers.transform_keys(&:downcase).fetch("content-type")
+        recorded.headers.transform_keys(&:downcase)["content-type"],
+        _1.headers.transform_keys(&:downcase)["content-type"]
       )
     end
   end
@@ -298,8 +300,9 @@ class VernSDKTest < Minitest::Test
     vern.runs.create(task_id: "task_123456")
 
     assert_requested(:any, /./) do |req|
-      headers = req.headers.transform_keys(&:downcase).fetch_values("accept", "content-type")
-      headers.each { refute_empty(_1) }
+      headers = req.headers.transform_keys(&:downcase)
+      expected = req.body.nil? ? ["accept"] : %w[accept content-type]
+      headers.fetch_values(*expected).each { refute_empty(_1) }
     end
   end
 end

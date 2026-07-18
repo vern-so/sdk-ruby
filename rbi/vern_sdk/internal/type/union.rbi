@@ -16,7 +16,8 @@ module VernSDK
             T::Array[
               [
                 T.nilable(Symbol),
-                T.proc.returns(VernSDK::Internal::Type::Converter::Input)
+                T.proc.returns(VernSDK::Internal::Type::Converter::Input),
+                VernSDK::Internal::AnyHash
               ]
             ]
           )
@@ -25,7 +26,13 @@ module VernSDK
         end
 
         # @api private
-        sig { returns(T::Array[[T.nilable(Symbol), T.anything]]) }
+        sig do
+          returns(
+            T::Array[
+              [T.nilable(Symbol), T.anything, VernSDK::Internal::AnyHash]
+            ]
+          )
+        end
         protected def derefed_variants
         end
 
@@ -78,6 +85,11 @@ module VernSDK
         end
 
         # @api private
+        #
+        # Tries to efficiently coerce the given value to one of the known variants.
+        #
+        # If the value cannot match any of the known variants, the coercion is considered
+        # non-viable and returns the original value.
         sig do
           override
             .params(
